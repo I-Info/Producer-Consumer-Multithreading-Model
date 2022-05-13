@@ -39,9 +39,7 @@ public class Consumer implements Runnable {
                 // Get shared lock
                 if (sharedLock.increase()) {
                     int position;
-//                    synchronized (buffer) {
                     position = buffer.position();
-//                    }
                     if (position == 0) {
                         // Empty, wait for writing thread
                         synchronized (resourceLock) {
@@ -55,10 +53,13 @@ public class Consumer implements Runnable {
                     System.out.printf("Max read count: %s\n", position);
                     sharedLock.setMaxCount(position);
                     // Try to acquire resource lock
+                    int spinCount = 0;
                     while (!resourceLock.compareAndSet(false, true)) {
                         // Already locked, wait for notify
-                        synchronized (resourceLock) {
-                            resourceLock.wait();
+                        if (++spinCount == 10) {
+                            synchronized (resourceLock) {
+                                resourceLock.wait();
+                            }
                         }
                     }
                     buffer.flip();

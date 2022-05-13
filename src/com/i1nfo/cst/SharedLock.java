@@ -19,10 +19,13 @@ public class SharedLock {
 
     public boolean increase() throws InterruptedException {
         // Acquire lock
+        int spinCount = 0;
         while (readUnavailableSignal.get() || !lock.compareAndSet(false, true)) {
             // Already locked, waiting.
-            synchronized (this) {
-                wait();
+            if (++spinCount == 10) {
+                synchronized (this) {
+                    wait();
+                }
             }
         }
 
@@ -39,10 +42,13 @@ public class SharedLock {
 
     public boolean decrease() throws InterruptedException {
         // Acquire lock
+        int spinCount = 0;
         while (!lock.compareAndSet(false, true)) {
             // Already locked, waiting.
-            synchronized (this) {
-                wait();
+            if (++spinCount == 10) {
+                synchronized (this) {
+                    wait();
+                }
             }
         }
 

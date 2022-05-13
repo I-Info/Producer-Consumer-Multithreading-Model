@@ -11,9 +11,9 @@ public class Main {
         CharBuffer buffer = CharBuffer.allocate(20);
         Producer producer1 = new Producer("A", resourceLock, buffer, 5);
         Producer producer2 = new Producer("B", resourceLock, buffer, 5);
-        Consumer consumer1 = new Consumer("A", resourceLock, sharedReadLock, buffer, 5);
-        Consumer consumer2 = new Consumer("B", resourceLock, sharedReadLock, buffer, 5);
-        Consumer consumer3 = new Consumer("C", resourceLock, sharedReadLock, buffer, 5);
+        Consumer consumer1 = new Consumer("A", resourceLock, sharedReadLock, buffer, 10);
+        Consumer consumer2 = new Consumer("B", resourceLock, sharedReadLock, buffer, 10);
+        Consumer consumer3 = new Consumer("C", resourceLock, sharedReadLock, buffer, 10);
 
         new Thread(producer1).start();
         new Thread(producer2).start();

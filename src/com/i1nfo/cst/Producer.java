@@ -33,16 +33,19 @@ public class Producer implements Runnable {
                 System.out.printf("Producer %s up\n", name);
 
                 // Try to acquire the lock
+                int spinCount = 0;
                 while (!resourceLock.compareAndSet(false, true)) {
                     // Already locked, wait for notify
-                    synchronized (resourceLock) {
-                        resourceLock.wait();
+                    if (++spinCount == 10) {
+                        synchronized (resourceLock) {
+                            resourceLock.wait();
+                        }
                     }
                 }
 
                 System.out.printf("Producer %s writing\n", name);
                 // Write chars
-                int length = rand.nextInt(2, 5);
+                int length = rand.nextInt(2, 8);
                 for (int i = 0; buffer.hasRemaining() && i < length; ++i) {
                     buffer.put((char) (65 + i));
                 }

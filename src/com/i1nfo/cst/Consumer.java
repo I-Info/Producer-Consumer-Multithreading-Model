@@ -1,6 +1,7 @@
 package com.i1nfo.cst;
 
 import java.nio.CharBuffer;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,11 +38,22 @@ public class Consumer implements Runnable {
 
                 // Get shared lock
                 if (sharedLock.increase()) {
-                    // TODO: avoid useless reading
-                    if (buffer.position() == 0) {
-                       // Empty, wait for writing thread
-                       resourceLock.wait();
+                    int position;
+//                    synchronized (buffer) {
+                    position = buffer.position();
+//                    }
+                    if (position == 0) {
+                        // Empty, wait for writing thread
+                        synchronized (resourceLock) {
+                            resourceLock.wait();
+                        }
+                        position = buffer.position();
                     }
+                    if (position == 1) {
+                        sharedLock.setReadUnavailableSignal(true);
+                    }
+                    System.out.printf("Max read count: %s\n", position);
+                    sharedLock.setMaxCount(position);
                     // Try to acquire resource lock
                     while (!resourceLock.compareAndSet(false, true)) {
                         // Already locked, wait for notify
@@ -51,12 +63,16 @@ public class Consumer implements Runnable {
                     }
                     buffer.flip();
                     // Resource locked by shared read lock, notify other read thread.
-                    sharedLock.notify();
+                    sharedLock.sNotify();
                 }
 
                 // Read operation...
-                System.out.printf("Consumer %s reading\n", name);
-
+                System.out.printf("Consumer %s reading..\n", name);
+                synchronized (buffer) {
+                    System.out.printf("Consumer %s get: %s\n", name, buffer.get());
+                    System.out.printf("%s %s %s\n", Arrays.toString(buffer.array()), buffer.position(), buffer.limit());
+                }
+                System.out.printf("Consumer %s read finish..\n", name);
 
                 if (sharedLock.decrease()) {
                     // The last read thread, release the resource lock.
@@ -65,8 +81,9 @@ public class Consumer implements Runnable {
                     synchronized (resourceLock) {
                         resourceLock.notify();
                     }
-                    sharedLock.notify();
+                    sharedLock.sNotify();
                 }
+                System.out.printf("Consumer %s down\n", name);
 
             }
         } catch (InterruptedException e) {

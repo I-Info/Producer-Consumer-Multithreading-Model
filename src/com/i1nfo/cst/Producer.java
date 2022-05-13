@@ -47,7 +47,7 @@ public class Producer implements Runnable {
                     buffer.put((char) (65 + i));
                 }
 
-                System.out.println(Arrays.toString(buffer.array()));
+                System.out.printf("%s %s %s\n", Arrays.toString(buffer.array()), buffer.position(), buffer.limit());
 
                 // Release the lock
                 resourceLock.set(false);

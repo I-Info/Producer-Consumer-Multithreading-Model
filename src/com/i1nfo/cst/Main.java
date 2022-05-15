@@ -9,17 +9,13 @@ public class Main {
         AtomicBoolean resourceLock = new AtomicBoolean(false);
         SharedLock sharedReadLock = new SharedLock();
         CharBuffer buffer = CharBuffer.allocate(20);
-        Producer producer1 = new Producer("A", resourceLock, buffer, 5);
-        Producer producer2 = new Producer("B", resourceLock, buffer, 5);
-        Consumer consumer1 = new Consumer("A", resourceLock, sharedReadLock, buffer, 10);
-        Consumer consumer2 = new Consumer("B", resourceLock, sharedReadLock, buffer, 10);
-        Consumer consumer3 = new Consumer("C", resourceLock, sharedReadLock, buffer, 10);
+        for (int i = 0; i < 5; ++i) {
+            new Thread(new Producer("P" + (char) (65 + i), resourceLock, buffer, 15)).start();
+        }
+        for (int i = 0; i < 10; ++i) {
+            new Thread(new Consumer("C" + (char) (65 + i), resourceLock, sharedReadLock, buffer, 20)).start();
+        }
 
-        new Thread(producer1).start();
-        new Thread(producer2).start();
-        new Thread(consumer1).start();
-        new Thread(consumer2).start();
-        new Thread(consumer3).start();
     }
 
 }

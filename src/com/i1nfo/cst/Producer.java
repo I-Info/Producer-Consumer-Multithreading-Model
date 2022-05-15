@@ -28,7 +28,7 @@ public class Producer implements Runnable {
             for (int j = 0; j < runTimes; ++j) {
                 // Main event loop
                 synchronized (this) {
-                    wait(rand.nextLong(150, 155)); // Sleep random time
+                    wait(rand.nextLong(50, 55)); // Sleep random time
                 }
                 System.out.printf("Producer %s up\n", name);
 
@@ -40,18 +40,19 @@ public class Producer implements Runnable {
                         synchronized (resourceLock) {
                             resourceLock.wait();
                         }
+                        spinCount = 0;
                     }
                 }
 
-                System.out.printf("Producer %s writing\n", name);
+                System.out.printf("Producer %s writing..\n", name);
                 // Write chars
                 int length = rand.nextInt(2, 8);
                 for (int i = 0; buffer.hasRemaining() && i < length; ++i) {
                     buffer.put((char) (65 + i));
                 }
 
-                System.out.printf("%s %s %s\n", Arrays.toString(buffer.array()), buffer.position(), buffer.limit());
-
+                System.out.printf("%s [position: %s, limit: %s]\n", Arrays.toString(buffer.array()), buffer.position(), buffer.limit());
+                System.out.printf("Producer %s write finish..\n", name);
                 // Release the lock
                 resourceLock.set(false);
                 synchronized (resourceLock) {

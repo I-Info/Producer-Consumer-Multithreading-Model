@@ -32,12 +32,13 @@ public class Consumer implements Runnable {
             for (int j = 0; j < runTimes; ++j) {
                 // Main event loop
                 synchronized (this) {
-                    wait(rand.nextLong(50, 55)); // Sleep random time
+                    wait(rand.nextLong(30, 31)); // Sleep random time
                 }
                 System.out.printf("Consumer %s up\n", name);
 
                 // Get shared lock
-                if (sharedLock.increase()) {
+                int index;
+                if ((index = sharedLock.increase() - 1) == 0) {
                     int position;
                     position = buffer.position();
                     if (position == 0) {
@@ -48,10 +49,11 @@ public class Consumer implements Runnable {
                         position = buffer.position();
                     }
                     if (position == 1) {
-                        sharedLock.setReadUnavailableSignal(true);
+                        // Only one available read count
+                        sharedLock.setReadUnavailableSignal();
                     }
-                    System.out.printf("Max read count: %s\n", position);
-                    sharedLock.setMaxCount(position);
+                    sharedLock.setMaxReadCount(position);
+                    System.out.println("Max read count: " + position);
                     // Try to acquire resource lock
                     int spinCount = 0;
                     while (!resourceLock.compareAndSet(false, true)) {
@@ -69,14 +71,17 @@ public class Consumer implements Runnable {
 
                 // Read operation...
                 System.out.printf("Consumer %s reading..\n", name);
-                synchronized (buffer) {
-                    System.out.printf("Consumer %s get: %s\n", name, buffer.get());
-                    System.out.printf("%s %s %s\n", Arrays.toString(buffer.array()), buffer.position(), buffer.limit());
+                if (index > buffer.length()) {
+                    System.out.println("err");
                 }
+                System.out.printf("Consumer %s get: '%s' from %s [index: %s, limit: %s]\n", name, buffer.get(index), Arrays.toString(buffer.array()), index, buffer.limit() - 1);
                 System.out.printf("Consumer %s read finish..\n", name);
 
                 if (sharedLock.decrease()) {
                     // The last read thread, release the resource lock.
+                    int readCount = sharedLock.getReadCount();
+                    System.out.printf("Total read: %s\n", readCount);
+                    buffer.position(readCount);
                     buffer.compact();
                     resourceLock.set(false);
                     synchronized (resourceLock) {

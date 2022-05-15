@@ -1,59 +1,66 @@
 package com.i1nfo.cst;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SharedLock {
     private volatile int count;
 
-    private volatile int maxCount;
+    private volatile int maxReadCount;
 
-    private final AtomicBoolean readUnavailableSignal;
+    private volatile int readCount;
 
-    private final AtomicBoolean lock;
+    private final AtomicInteger lock;
+
 
     SharedLock() {
         count = 0;
-        lock = new AtomicBoolean(false);
-        readUnavailableSignal = new AtomicBoolean(false);
+        readCount = 0;
+        lock = new AtomicInteger(0);
     }
 
-    public boolean increase() throws InterruptedException {
+    public int increase() throws InterruptedException {
         // Acquire lock
         int spinCount = 0;
-        while (readUnavailableSignal.get() || !lock.compareAndSet(false, true)) {
+        while (!lock.compareAndSet(0, 1)) {
             // Already locked, waiting.
             if (++spinCount == 10) {
                 synchronized (this) {
+                    notify();
                     wait();
                 }
+                spinCount = 0;
             }
         }
 
         if (++count == 1) {
-            return true;
+            // Init read count
+            readCount = 1;
         } else {
-            if (count == maxCount) {
-                readUnavailableSignal.set(true);
+            ++readCount;
+            if (readCount == maxReadCount) {
+                lock.set(3);
             }
             sNotify();
-            return false;
         }
+
+        return readCount;
     }
 
     public boolean decrease() throws InterruptedException {
         // Acquire lock
         int spinCount = 0;
-        while (!lock.compareAndSet(false, true)) {
+        while (!lock.compareAndSet(0, 1) && !lock.compareAndSet(2, 3)) {
             // Already locked, waiting.
             if (++spinCount == 10) {
                 synchronized (this) {
                     wait();
                 }
+                spinCount = 0;
             }
         }
 
         if (--count == 0) {
-            readUnavailableSignal.set(false);
+            lock.set(1);
             return true;
         } else {
             sNotify();
@@ -63,17 +70,25 @@ public class SharedLock {
 
     public void sNotify() {
         // release lock
-        lock.set(false);
+        if (lock.get() == 1) {
+            lock.set(0);
+        } else if (lock.get() == 3) {
+            lock.set(2);
+        }
         synchronized (this) {
-            notify();
+            notifyAll();
         }
     }
 
-    public void setMaxCount(int maxCount) {
-        this.maxCount = maxCount;
+    public void setMaxReadCount(int maxReadCount) {
+        this.maxReadCount = maxReadCount;
     }
 
-    public void setReadUnavailableSignal(boolean flag) {
-        readUnavailableSignal.set(flag);
+    public void setReadUnavailableSignal() {
+        lock.set(3);
+    }
+
+    public int getReadCount() {
+        return readCount;
     }
 }
